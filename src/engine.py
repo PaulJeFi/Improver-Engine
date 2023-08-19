@@ -1,27 +1,57 @@
 import chess
 import random
 
+VALUES = {chess.PAWN : 100,
+          chess.KNIGHT : 300,
+          chess.BISHOP : 320,
+          chess.ROOK : 500,
+          chess.QUEEN : 900}
 
 def search(board: chess.Board) -> chess.Move :
 
-    
+    for move in board.legal_moves :
+        board.push(move)
+        if board.is_checkmate() :
+            board.pop()
+            return move
+        board.pop()
+
     hanging_squares = []
     
     for square in chess.SquareSet(board.occupied_co[1 - int(board.turn)]) :
         if board.attackers(1 - int(board.turn), square) == chess.SquareSet(0) :
             hanging_squares.append(square)
+
+    def score_capture(move: chess.Move) -> int :
     
-    for move in board.generate_legal_captures() :
-        if move.to_square in hanging_squares :
-            return move
+        if board.piece_type_at(move.to_square) == chess.PAWN and board.piece_type_at(move.from_square) == chess.PAWN :
+            return 1
+        
+        elif board.is_en_passant(move) :
+            return 1
     
+        elif not (move.to_square in hanging_squares) :
+            return VALUES[board.piece_type_at(move.to_square)] - VALUES[board.piece_type_at(move.from_square)]
+
+        else :
+            return VALUES[board.piece_type_at(move.to_square)]
+
+    captures = list(board.generate_legal_captures())
+    captures.sort(key=score_capture, reverse=True)
+
+    if len(captures) :
+        if score_capture(captures[0]) > 0 :
+            return captures[0]
+
     moves = list(board.legal_moves)
     random.shuffle(moves)
     for move in moves :
         if not board.is_capture(move) :
             return move
     
-    return random.choice(list(board.generate_legal_captures()))
+    if len(moves) :
+        return random.choice(moves)
+    return '0000'
 
 def pretty_fen(fen) :
     FEN = ''
@@ -99,7 +129,6 @@ def main() -> None :
                     print('Invalid FEN or moves')
 
             elif inp[0] == 'go' :
-
                 move = search(board)
                 print('bestmove ' + str(move))
 
